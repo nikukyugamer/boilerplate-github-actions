@@ -1,0 +1,62 @@
+name: ベースワークフロー
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      foo:
+        description: FOO
+        type: choice
+        required: true
+        default: 'yes'
+        options:
+          - 'yes'
+          - 'no'
+      hoge:
+        description: BAR
+        type: string
+        required: false
+        default: fuga
+          - 'no'
+  schedule:
+    # 時間は UTC で指定する
+    - cron: '00 03 * * 1,3,5'
+
+jobs:
+  base_job:
+    name: ベースジョブ
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: （デバッグ用）Payload (GITHUB_EVENT_PATH) を確認する
+        run: |
+          cat $GITHUB_EVENT_PATH
+      - name: （デバッグ用）inputs と secrets と github と env を確認する
+        run: |
+          echo '${{ toJson(inputs) }}'
+          echo '${{ toJson(secrets) }}'
+          echo '${{ toJson(github) }}'
+          echo '${{ toJson(env) }}'
+      - name: （デバッグ用）各種バージョンを確認する
+        run: |
+          echo "gh version: $(gh version)"
+          echo "docker --version: $(docker --version)"
+          echo "docker-compose --version: $(docker-compose --version)"
+      - name: 全体を通して使う変数を定義する
+        env:
+          TZ: 'Asia/Tokyo'
+        run: |
+          echo CURRENT_DATETIME_WITH_DIVIDERS=`date "+%Y/%m/%d %H:%M:%S"` >> $GITHUB_ENV
+      - name: $ git clone する
+        uses: actions/checkout@v3
+        # with:
+          # PAT を使ってユーザー認証を行わないと push をトリガにして GitHub Actions が発動しない
+          # token: ${{ secrets.USER_ACCESS_TOKEN }}
